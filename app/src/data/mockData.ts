@@ -1,4 +1,5 @@
 import type { Influencer, Brand, Campaign, User, OpenCampaign, CampaignApplication } from '@/types';
+import { IS_DEMO } from '@/lib/config';
 
 export const mockUsers: User[] = [
   {
@@ -209,6 +210,10 @@ const STORAGE_APPLICATIONS = 'influconnect_applications';
 const STORAGE_NOTIFICATIONS = 'influconnect_notifications';
 
 export function getOpenCampaigns(): OpenCampaign[] {
+  if (!IS_DEMO) {
+    // En modo producción real, estos datos deben venir de la API
+    return [];
+  }
   try {
     const raw = localStorage.getItem(STORAGE_OPEN_CAMPAIGNS);
     if (raw) return JSON.parse(raw);
@@ -220,10 +225,15 @@ export function getOpenCampaigns(): OpenCampaign[] {
 }
 
 export function saveOpenCampaigns(campaigns: OpenCampaign[]): void {
+  if (!IS_DEMO) return;
   localStorage.setItem(STORAGE_OPEN_CAMPAIGNS, JSON.stringify(campaigns));
 }
 
 export function getApplications(): CampaignApplication[] {
+  if (!IS_DEMO) {
+    // En producción real, las postulaciones vienen de la API
+    return [];
+  }
   try {
     const raw = localStorage.getItem(STORAGE_APPLICATIONS);
     return raw ? JSON.parse(raw) : [];
@@ -233,6 +243,7 @@ export function getApplications(): CampaignApplication[] {
 }
 
 export function saveApplications(apps: CampaignApplication[]): void {
+  if (!IS_DEMO) return;
   localStorage.setItem(STORAGE_APPLICATIONS, JSON.stringify(apps));
 }
 

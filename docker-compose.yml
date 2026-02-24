@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: influconnect-db
+    environment:
+      POSTGRES_DB: influconnect
+      POSTGRES_USER: influconnect
+      POSTGRES_PASSWORD: influconnect_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  gateway:
+    build:
+      context: ./api/gateway
+    container_name: influconnect-gateway
+    environment:
+      PORT: 4000
+      CAMPAIGNS_SERVICE_URL: http://campaigns:4101
+      AUTH_SERVICE_URL: http://auth:4100
+    depends_on:
+      - campaigns
+      - auth
+    ports:
+      - "4000:4000"
+
+  campaigns:
+    build:
+      context: ./api/services/campaigns
+    container_name: influconnect-campaigns
+    environment:
+      PORT: 4101
+      DATABASE_URL: postgres://influconnect:influconnect_password@db:5432/influconnect
+    depends_on:
+      - db
+    ports:
+      - "4101:4101"
+
+  auth:
+    build:
+      context: ./api/services/auth
+    container_name: influconnect-auth
+    environment:
+      PORT: 4100
+      DATABASE_URL: postgres://influconnect:influconnect_password@db:5432/influconnect
+      AUTH_JWT_SECRET: super_secret_jwt_key_change_me
+    depends_on:
+      - db
+    ports:
+      - "4100:4100"
+
+volumes:
+  db-data:
+
