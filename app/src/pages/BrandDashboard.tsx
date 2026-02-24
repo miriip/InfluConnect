@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,8 @@ import { mockInfluencers, mockCampaigns, mockBrands, getOpenCampaigns, getApplic
 import { toast } from 'sonner';
 import type { Campaign, CampaignApplication, OpenCampaign } from '@/types';
 import type { Influencer } from '@/types';
+import { IS_DEMO } from '@/lib/config';
+import { fetchOpenCampaigns } from '@/lib/api';
 
 export function BrandDashboard() {
   const { user, logout, setView } = useAuth();
@@ -50,6 +52,32 @@ export function BrandDashboard() {
   const [newCampaignForm, setNewCampaignForm] = useState({ name: '', objective: '', budget: '', deliverablesSummary: '', startDate: '', endDate: '' });
 
   const myBrandId = useMemo(() => mockBrands.find((b) => b.userId === user?.id)?.id ?? '1', [user?.id]);
+
+  // Cargar campañas abiertas desde API cuando no estamos en modo demo
+  useEffect(() => {
+    if (IS_DEMO) return;
+    fetchOpenCampaigns()
+      .then((data) => {
+        setOpenCampaigns(
+          data.map((c) => ({
+            id: c.id,
+            brandId: c.brandId,
+            brandName: 'Empresa', // en backend real se puede popular mejor
+            name: c.name,
+            objective: c.description,
+            budget: c.baseAmount,
+            currency: c.currency,
+            deliverablesSummary: `${c.deliverables.length} entregables`,
+            startDate: c.startDate,
+            endDate: c.endDate,
+            createdAt: c.createdAt,
+          })),
+        );
+      })
+      .catch(() => {
+        // en caso de error, mantenemos el estado actual
+      });
+  }, []);
   const myApplications = useMemo(() => {
     return applications.filter((a) => {
       const oc = openCampaigns.find((o) => o.id === a.openCampaignId);

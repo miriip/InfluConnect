@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User, View } from '@/types';
+import { API_BASE_URL, IS_DEMO } from '@/lib/config';
 
 interface AuthContextType {
   user: User | null;
@@ -109,23 +110,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cargar usuario desde localStorage al iniciar
+  // Cargar usuario desde localStorage al iniciar (solo modo demo)
   useEffect(() => {
-    const storedUser = localStorage.getItem('influconnect_user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        // Redirigir al home
-        setCurrentView('home');
-      } catch (e) {
-        localStorage.removeItem('influconnect_user');
+    if (IS_DEMO) {
+      const storedUser = localStorage.getItem('influconnect_user');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          // Redirigir al home
+          setCurrentView('home');
+        } catch {
+          localStorage.removeItem('influconnect_user');
+        }
       }
     }
     setIsLoading(false);
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
+    if (!IS_DEMO) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          return { success: false, message: body.error ?? 'Error al iniciar sesión.' };
+        }
+
+        const loggedUser: User = {
+          id: body.user.id,
+          email: body.user.email,
+          role: body.user.role,
+          name: body.user.name,
+        };
+
+        localStorage.setItem('influconnect_user', JSON.stringify(loggedUser));
+        localStorage.setItem('influconnect_token', body.token);
+        setUser(loggedUser);
+        setCurrentView('home');
+
+        return { success: true };
+      } catch {
+        return { success: false, message: 'No se pudo conectar con el servidor de autenticación.' };
+      }
+    }
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
 
@@ -175,6 +207,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (data: RegisterData): Promise<{ success: boolean; message?: string }> => {
+    if (!IS_DEMO) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          return { success: false, message: body.error ?? 'Error al registrar usuario.' };
+        }
+        return { success: true, message: 'Registro exitoso. Ahora puedes iniciar sesión.' };
+      } catch {
+        return { success: false, message: 'No se pudo conectar con el servidor de autenticación.' };
+      }
+    }
     // Validaciones
     if (!data.email.trim()) {
       return { success: false, message: 'El email es requerido' };
@@ -243,6 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem('influconnect_user');
+    localStorage.removeItem('influconnect_token');
     setUser(null);
     setCurrentView('landing');
   }, []);
@@ -255,14 +304,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
-      localStorage.setItem('influconnect_user', JSON.stringify(updatedUser));
-      
-      // Actualizar también en la lista de usuarios
-      const users = JSON.parse(localStorage.getItem('influconnect_users') || '[]');
-      const userIndex = users.findIndex((u: any) => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex] = { ...users[userIndex], ...data };
-        localStorage.setItem('influconnect_users', JSON.stringify(users));
+      if (IS_DEMO) {
+        localStorage.setItem('influconnect_user', JSON.stringify(updatedUser));
+
+        // Actualizar también en la lista de usuarios
+        const users = JSON.parse(localStorage.getItem('influconnect_users') || '[]');
+        const userIndex = users.findIndex((u: any) => u.id === user.id);
+        if (userIndex !== -1) {
+          users[userIndex] = { ...users[userIndex], ...data };
+          localStorage.setItem('influconnect_users', JSON.stringify(users));
+        }
       }
     }
   }, [user]);

@@ -31,6 +31,8 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { mockInfluencers, mockCampaigns, mockBrands, getOpenCampaigns, getApplications, saveApplications, getBrandUserId } from '@/data/mockData';
 import { toast } from 'sonner';
 import type { Campaign, OpenCampaign } from '@/types';
+import { IS_DEMO } from '@/lib/config';
+import { fetchOpenCampaigns } from '@/lib/api';
 
 const MAX_MESSAGE_LENGTH = 300;
 
@@ -53,6 +55,33 @@ export function InfluencerDashboard() {
       setActiveTab('open');
       sessionStorage.removeItem('influencer_initial_tab');
     }
+  }, []);
+
+  // Cargar campañas abiertas desde API cuando no estamos en modo demo
+  useEffect(() => {
+    if (IS_DEMO) return;
+    fetchOpenCampaigns()
+      .then((data) => {
+        setOpenCampaigns(
+          data.map((c) => ({
+            id: c.id,
+            brandId: c.brandId,
+            brandName: 'Empresa',
+            name: c.name,
+            objective: c.description,
+            budget: c.baseAmount,
+            currency: c.currency,
+            deliverablesSummary: `${c.deliverables.length} entregables`,
+            startDate: c.startDate,
+            endDate: c.endDate,
+            createdAt: c.createdAt,
+            platform: undefined,
+          })),
+        );
+      })
+      .catch(() => {
+        // mantener estado actual en caso de error
+      });
   }, []);
 
   // Obtener datos del influencer (simulado)

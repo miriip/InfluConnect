@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  influencerProfile InfluencerProfile?
+  brandProfile      BrandProfile?
+  notifications     Notification[]
+}
+
+model InfluencerProfile {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  handle      String
+  bio         String?
+  category    String
+  location    String?
+  followers   Int
+  engagement  Float
+  rating      Float?
+  isVerified  Boolean  @default(false)
+  campaigns   Campaign[] @relation("InfluencerCampaigns")
+}
+
+model BrandProfile {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  companyName String
+  industry    String
+  location    String?
+  website     String?
+  isVerified  Boolean  @default(false)
+  campaigns   Campaign[] @relation("BrandCampaigns")
+}
+
+model Campaign {
+  id           String       @id @default(cuid())
+  name         String
+  description  String
+  status       CampaignStatus
+  currency     String       @default("USD")
+  baseAmount   Int
+  platformFee  Int
+  brandPays    Int
+  influencerReceives Int
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  brand        BrandProfile @relation("BrandCampaigns", fields: [brandId], references: [id])
+  brandId      String
+  influencer   InfluencerProfile @relation("InfluencerCampaigns", fields: [influencerId], references: [id])
+  influencerId String
+
+  deliverables Deliverable[]
+  payments     Payment[]
+  contract     Contract?
+}
+
+model Deliverable {
+  id          String   @id @default(cuid())
+  type        String
+  platform    String
+  quantity    Int
+  dueDate     DateTime
+  status      String   @default("pending")
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  campaignId  String
+}
+
+model Payment {
+  id           String    @id @default(cuid())
+  provider     String    // stripe | mercadopago
+  providerRef  String?
+  amount       Int
+  currency     String    @default("USD")
+  status       PaymentStatus
+  createdAt    DateTime  @default(now())
+
+  campaign     Campaign  @relation(fields: [campaignId], references: [id])
+  campaignId   String
+
+  breakdown    CommissionBreakdown?
+}
+
+model CommissionBreakdown {
+  id               String   @id @default(cuid())
+  influencerAmount Int
+  brandFee         Int
+  platformFee      Int
+
+  payment          Payment  @relation(fields: [paymentId], references: [id])
+  paymentId        String   @unique
+}
+
+model Contract {
+  id          String   @id @default(cuid())
+  url         String   // almacenamiento (S3/Cloudinary)
+  hash        String   // hash de verificación
+  createdAt   DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  campaignId  String  @unique
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum UserRole {
+  influencer
+  brand
+  admin
+}
+
+enum CampaignStatus {
+  draft
+  pending
+  negotiating
+  confirmed
+  paid
+  in_progress
+  completed
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+

@@ -1,0 +1,26 @@
+{
+  "name": "influconnect-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "gateway",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm --workspace gateway run dev",
+    "dev:auth": "npm --workspace services/auth run dev",
+    "dev:campaigns": "npm --workspace services/campaigns run dev",
+    "dev:payments": "npm --workspace services/payments run dev",
+    "dev:contracts": "npm --workspace services/contracts run dev",
+    "dev:notifications": "npm --workspace services/notifications run dev"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0"
+  }
+}
+
